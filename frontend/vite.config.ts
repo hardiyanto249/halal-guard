@@ -9,6 +9,11 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
       },
+    preview: {
+      port: 3003,
+      host: '0.0.0.0',
+      allowedHosts: ['halal-guard.centonk.my.id']
+    },
       plugins: [react()],
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
