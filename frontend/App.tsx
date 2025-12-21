@@ -22,14 +22,17 @@ const App: React.FC = () => {
   useEffect(() => {
     const loadTransactions = async () => {
       try {
+        console.log('🔄 Loading transactions from API...');
         setIsLoading(true);
         const transactions = await getAllTransactions();
+        console.log(`✅ Loaded ${transactions.length} transactions:`, transactions);
         setData(transactions);
       } catch (err) {
-        console.error('Failed to load transactions:', err);
+        console.error('❌ Failed to load transactions:', err);
         // Don't show error on initial load if database is empty
         // setError('Gagal memuat data transaksi dari database');
       } finally {
+        console.log('✅ Loading complete, setting isLoading to false');
         setIsLoading(false);
       }
     };
@@ -263,6 +266,15 @@ const App: React.FC = () => {
               <span>• Halal</span>
               <span>• Keadilan</span>
             </div>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="w-12 h-12 text-emerald-600 animate-spin mb-4" />
+            <h3 className="text-lg font-semibold text-slate-700">Memuat data...</h3>
+            <p className="text-sm text-slate-500">Mengambil transaksi dari database</p>
           </div>
         )}
 
