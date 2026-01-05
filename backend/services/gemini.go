@@ -1,11 +1,15 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
+	"text/template"
 
+	"halalguard-backend/config"
 	"halalguard-backend/models"
 
 	"github.com/google/generative-ai-go/genai"
@@ -31,82 +35,70 @@ func NewGeminiService(apiKey string) (*GeminiService, error) {
 	}, nil
 }
 
+// PromptData holds data for the prompt template
+type PromptData struct {
+	TransactionsJSON string
+	ContextText      string // Aggregated text for searching
+}
+
+// Contains checks if the context text contains a specific keyword (case-insensitive)
+func (p PromptData) Contains(term string) bool {
+	return strings.Contains(strings.ToLower(p.ContextText), strings.ToLower(term))
+}
+
 // AnalyzeTransactions analyzes transactions using Gemini AI
 func (s *GeminiService) AnalyzeTransactions(transactions []models.TransactionInput) ([]models.AnalysisResult, error) {
 	if len(transactions) == 0 {
 		return []models.AnalysisResult{}, nil
 	}
 
+	// Load prompt configuration
+	promptCfg := config.LoadPrompts()
+
 	model := s.client.GenerativeModel("gemini-2.5-flash")
 
-	// Set system instruction
+	// Set system instruction from config
 	model.SystemInstruction = &genai.Content{
 		Parts: []genai.Part{
-			genai.Text("Anda adalah sistem AI HalalGuard. Output harus JSON valid. Gunakan Bahasa Indonesia untuk reasoning dan correction."),
+			genai.Text(promptCfg.SystemInstruction),
 		},
 	}
 
 	// Configure JSON response
 	model.ResponseMIMEType = "application/json"
 
-	// Build prompt
+	// Prepare data for template
 	transactionsJSON, err := json.Marshal(transactions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal transactions: %w", err)
 	}
 
-	prompt := fmt.Sprintf(`
-Bertindaklah sebagai Auditor Kepatuhan Syariah DAN Analis Dampak Sosial Ekonomi Islam (Maslahah).
+	// Aggregate context text for dynamic keyword detection
+	var contextBuilder strings.Builder
+	for _, tx := range transactions {
+		contextBuilder.WriteString(tx.Description)
+		contextBuilder.WriteString(" ")
+		contextBuilder.WriteString(tx.Type)
+		contextBuilder.WriteString(" ")
+	}
 
-Tugas 1: COMPLIANCE SCORE (Kepatuhan Hukum)
-Nilai berdasarkan 5 Prinsip (0.0 Buruk - 1.0 Baik):
-1. Riba (30%%): Bebas bunga.
-2. Gharar (25%%): Kejelasan akad.
-3. Maysir (20%%): Bebas judi.
-4. Halal Goods (15%%): Objek halal.
-5. Justice/Keadilan (10%%): Kewajaran harga.
+	data := PromptData{
+		TransactionsJSON: string(transactionsJSON),
+		ContextText:      contextBuilder.String(),
+	}
 
-Tugas 2: MASLAHAH IMPACT SCORE (Dampak Sosial/Manfaat)
-Nilai dampak sosial transaksi ini (0-100) berdasarkan dimensi berikut:
-1. Keadilan Ekonomi (30%%): Distribusi kekayaan, pengentasan kemiskinan.
-2. Pengembangan Komunitas (25%%): Lapangan kerja, infrastruktur lokal.
-3. Dampak Pendidikan (20%%): Peningkatan skill, literasi.
-4. Kelestarian Lingkungan (15%%): Green investment, keberlanjutan.
-5. Kohesi Sosial (10%%): Kepercayaan komunitas, integrasi sosial.
+	// Parse and execute template
+	tmpl, err := template.New("analysis").Parse(promptCfg.AnalysisPrompt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse prompt template: %w", err)
+	}
 
-Berikan proyeksi dampak jangka panjang singkat untuk aspek Maslahah.
+	var promptBuf bytes.Buffer
+	if err := tmpl.Execute(&promptBuf, data); err != nil {
+		return nil, fmt.Errorf("failed to execute prompt template: %w", err)
+	}
 
-PENTING: Response harus berupa array JSON dengan struktur berikut untuk setiap transaksi:
-{
-  "transactionId": "string",
-  "status": "Patuh" | "Tidak Patuh" | "Butuh Tinjauan",
-  "violationType": "Riba" | "Gharar" | "Maysir" | "Halal" | "Syubhat",
-  "confidenceScore": number (0-100),
-  "breakdown": {
-    "ribaScore": number (0-1),
-    "ghararScore": number (0-1),
-    "maysirScore": number (0-1),
-    "halalScore": number (0-1),
-    "justiceScore": number (0-1)
-  },
-  "maslahahAnalysis": {
-    "totalScore": number (0-100),
-    "breakdown": {
-      "economicJustice": number (0-100),
-      "communityDevelopment": number (0-100),
-      "educationalImpact": number (0-100),
-      "environmental": number (0-100),
-      "socialCohesion": number (0-100)
-    },
-    "longTermProjection": "string"
-  },
-  "reasoning": "string",
-  "suggestedCorrection": "string (optional)"
-}
-
-Data Input:
-%s
-`, string(transactionsJSON))
+	prompt := promptBuf.String()
 
 	// Generate content
 	resp, err := model.GenerateContent(s.ctx, genai.Text(prompt))
@@ -122,6 +114,12 @@ Data Input:
 	// Parse JSON response
 	var results []models.AnalysisResult
 	responseText := fmt.Sprintf("%v", resp.Candidates[0].Content.Parts[0])
+
+	// Clean up markdown code blocks if present (Gemini sometimes adds ```json ... ```)
+	responseText = strings.TrimPrefix(responseText, "```json")
+	responseText = strings.TrimPrefix(responseText, "```")
+	responseText = strings.TrimSuffix(responseText, "```")
+	responseText = strings.TrimSpace(responseText)
 
 	if err := json.Unmarshal([]byte(responseText), &results); err != nil {
 		log.Printf("Failed to parse AI response: %s", responseText)

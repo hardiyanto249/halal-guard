@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"halalguard-backend/audit"
 	"halalguard-backend/models"
 	"halalguard-backend/services"
 
@@ -33,15 +34,22 @@ func (h *Handler) AnalyzeTransactions(c *gin.Context) {
 		return
 	}
 
+	// 1. Sanitize Input (IEEE 7003)
+	sanitizedResult := audit.SanitizeInput(req.Transactions)
+	transactions := sanitizedResult.SanitizedTransactions
+
+	// 2. Perform Bias Check (IEEE 7003)
+	biasResult := audit.PerformBiasCheck(transactions)
+
 	// Save transactions to database
-	for _, tx := range req.Transactions {
+	for _, tx := range transactions {
 		if err := services.SaveTransaction(tx); err != nil {
 			log.Printf("Warning: Failed to save transaction %s: %v", tx.ID, err)
 		}
 	}
 
 	// Analyze transactions using Gemini AI
-	results, err := h.geminiService.AnalyzeTransactions(req.Transactions)
+	results, err := h.geminiService.AnalyzeTransactions(transactions)
 	if err != nil {
 		log.Printf("Analysis failed: %v", err)
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
@@ -51,10 +59,15 @@ func (h *Handler) AnalyzeTransactions(c *gin.Context) {
 		return
 	}
 
-	// Save analysis results to database
-	for _, result := range results {
-		if err := services.SaveAnalysisResult(result); err != nil {
-			log.Printf("Warning: Failed to save analysis result for %s: %v", result.TransactionID, err)
+	// Save analysis results to database WITH AUDIT TRAIL
+	for i := range results {
+		// Enrich result with audit data
+		results[i].BiasCheckStatus = biasResult.Status
+		results[i].BiasLog = biasResult.Details
+		results[i].DataSanitizationVersion = sanitizedResult.Version
+
+		if err := services.SaveAnalysisResult(results[i]); err != nil {
+			log.Printf("Warning: Failed to save analysis result for %s: %v", results[i].TransactionID, err)
 		}
 	}
 

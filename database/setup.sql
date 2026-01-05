@@ -43,6 +43,9 @@ CREATE TABLE IF NOT EXISTS analysis_results (
     reasoning TEXT NOT NULL,
     suggested_correction TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    bias_check_status VARCHAR(50),
+    bias_log TEXT,
+    data_sanitization_version VARCHAR(10),
     UNIQUE(transaction_id)
 );
 

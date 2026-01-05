@@ -10,8 +10,8 @@ interface Props {
 const Header: React.FC<Props> = ({ currentView, onNavigate }) => {
   const getLinkClass = (view: string) => {
     const baseClass = "cursor-pointer transition-colors px-3 py-2 rounded-md";
-    return currentView === view 
-      ? `${baseClass} text-white bg-emerald-800` 
+    return currentView === view
+      ? `${baseClass} text-white bg-emerald-800`
       : `${baseClass} hover:text-emerald-300 hover:bg-emerald-800/50`;
   };
 
@@ -37,7 +37,7 @@ const Header: React.FC<Props> = ({ currentView, onNavigate }) => {
           </button>
           <div className="h-6 w-px bg-emerald-700 mx-2"></div>
           <button onClick={() => onNavigate('monitoring')} className={`${getLinkClass('monitoring')} flex items-center gap-1.5`}>
-            <Activity className="w-4 h-4" /> Status Sistem
+            <Activity className="w-4 h-4" /> Simulasi Monitoring (PoC)
           </button>
         </nav>
       </div>

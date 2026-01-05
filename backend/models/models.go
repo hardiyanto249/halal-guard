@@ -56,6 +56,11 @@ type AnalysisResult struct {
 	MaslahahAnalysis    *MaslahahAnalysis   `json:"maslahahAnalysis,omitempty"`
 	Reasoning           string              `json:"reasoning"`
 	SuggestedCorrection string              `json:"suggestedCorrection,omitempty"`
+
+	// Audit Fields (IEEE 7003)
+	BiasCheckStatus         string `json:"biasCheckStatus"`
+	BiasLog                 string `json:"biasLog"`
+	DataSanitizationVersion string `json:"dataSanitizationVersion"`
 }
 
 // CombinedResult represents transaction with analysis

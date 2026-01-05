@@ -37,8 +37,9 @@ func SaveAnalysisResult(result models.AnalysisResult) error {
 			riba_score, gharar_score, maysir_score, halal_score, justice_score,
 			maslahah_total_score, maslahah_economic_justice, maslahah_community_dev,
 			maslahah_educational, maslahah_environmental, maslahah_social_cohesion,
-			maslahah_projection, reasoning, suggested_correction
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+			maslahah_projection, reasoning, suggested_correction,
+			bias_check_status, bias_log, data_sanitization_version
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
 		ON CONFLICT (transaction_id) DO UPDATE SET
 			status = EXCLUDED.status,
 			violation_type = EXCLUDED.violation_type,
@@ -56,7 +57,10 @@ func SaveAnalysisResult(result models.AnalysisResult) error {
 			maslahah_social_cohesion = EXCLUDED.maslahah_social_cohesion,
 			maslahah_projection = EXCLUDED.maslahah_projection,
 			reasoning = EXCLUDED.reasoning,
-			suggested_correction = EXCLUDED.suggested_correction
+			suggested_correction = EXCLUDED.suggested_correction,
+			bias_check_status = EXCLUDED.bias_check_status,
+			bias_log = EXCLUDED.bias_log,
+			data_sanitization_version = EXCLUDED.data_sanitization_version
 	`
 
 	var maslahahTotal, maslahahEconomic, maslahahCommunity, maslahahEducational, maslahahEnvironmental, maslahahSocial sql.NullFloat64
@@ -79,6 +83,7 @@ func SaveAnalysisResult(result models.AnalysisResult) error {
 		maslahahTotal, maslahahEconomic, maslahahCommunity, maslahahEducational,
 		maslahahEnvironmental, maslahahSocial, maslahahProjection,
 		result.Reasoning, result.SuggestedCorrection,
+		result.BiasCheckStatus, result.BiasLog, result.DataSanitizationVersion,
 	)
 
 	if err != nil {
