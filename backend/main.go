@@ -10,6 +10,7 @@ import (
 	"halalguard-backend/database"
 	"halalguard-backend/handlers"
 	"halalguard-backend/services"
+	"halalguard-backend/socket"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -60,7 +61,11 @@ func main() {
 		api.POST("/analyze", handler.AnalyzeTransactions)
 		api.GET("/transactions", handler.GetAllTransactions)
 		api.GET("/transactions/:id", handler.GetTransactionByID)
+		api.GET("/system-metrics", handler.GetSystemMetrics)
 	}
+
+	// WebSocket Route
+	router.GET("/ws", socket.Handler)
 
 	// Graceful shutdown
 	go func() {

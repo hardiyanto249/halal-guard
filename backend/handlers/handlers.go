@@ -114,3 +114,17 @@ func (h *Handler) HealthCheck(c *gin.Context) {
 		"version": "1.0.0",
 	})
 }
+
+// GetSystemMetrics returns aggregated system metrics
+func (h *Handler) GetSystemMetrics(c *gin.Context) {
+	metrics, err := services.GetSystemMetrics()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "Failed to get system metrics",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, metrics)
+}

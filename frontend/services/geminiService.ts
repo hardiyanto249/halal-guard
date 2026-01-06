@@ -67,3 +67,16 @@ export const healthCheck = async () => {
         throw error;
     }
 };
+
+export const getSystemMetrics = async () => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/system-metrics`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch system metrics');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Failed to fetch system metrics:', error);
+        throw error;
+    }
+};

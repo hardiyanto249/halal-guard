@@ -5,6 +5,7 @@ import TransactionInputForm from './components/TransactionInput';
 import AnalysisDashboard from './components/AnalysisDashboard';
 import TransactionList from './components/TransactionList';
 import SystemMonitor from './components/SystemMonitor';
+import ToastNotification from './components/ToastNotification';
 import { TransactionInput, CombinedResult, ComplianceStatus } from './types';
 import { analyzeTransactions, getAllTransactions } from './services/geminiService';
 import { Loader2, FileText, AlertTriangle, Printer, Download } from 'lucide-react';
@@ -238,6 +239,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+      <ToastNotification />
       <Header currentView={currentView} onNavigate={setCurrentView} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">

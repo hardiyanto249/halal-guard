@@ -84,3 +84,12 @@ type ErrorResponse struct {
 	Error   string `json:"error"`
 	Message string `json:"message,omitempty"`
 }
+
+// SystemMetrics represents aggregated system performance and audit data
+type SystemMetrics struct {
+	TotalAnalyzed            int            `json:"totalAnalyzed"`
+	AverageConfidence        float64        `json:"averageConfidence"`
+	BiasCheckStatus          map[string]int `json:"biasCheckStatus"`          // e.g. "BALANCED": 50, "BIASED": 2
+	ComplianceStats          map[string]int `json:"complianceStats"`          // e.g. "COMPLIANT": 40, "NON_COMPLIANT": 10
+	SanitizationVersionStats map[string]int `json:"sanitizationVersionStats"` // e.g. "v1.0.0": 100
+}

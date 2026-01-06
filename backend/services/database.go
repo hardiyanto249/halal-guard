@@ -250,3 +250,83 @@ func GetTransactionByID(id string) (*models.CombinedResult, error) {
 
 	return &result, nil
 }
+
+// GetSystemMetrics aggregates auditing and performance metrics
+func GetSystemMetrics() (*models.SystemMetrics, error) {
+	metrics := &models.SystemMetrics{
+		BiasCheckStatus:          make(map[string]int),
+		ComplianceStats:          make(map[string]int),
+		SanitizationVersionStats: make(map[string]int),
+	}
+
+	// 1. Total Analyzed & Average Confidence
+	err := database.DB.QueryRow(`
+		SELECT COUNT(*), COALESCE(AVG(confidence_score), 0) 
+		FROM analysis_results
+	`).Scan(&metrics.TotalAnalyzed, &metrics.AverageConfidence)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get basic metrics: %w", err)
+	}
+
+	// 2. Bias Check Stats
+	rows, err := database.DB.Query(`
+		SELECT bias_check_status, COUNT(*) 
+		FROM analysis_results 
+		WHERE bias_check_status IS NOT NULL 
+		GROUP BY bias_check_status
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get bias stats: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var status string
+		var count int
+		if err := rows.Scan(&status, &count); err == nil {
+			metrics.BiasCheckStatus[status] = count
+		}
+	}
+
+	// 3. Compliance Stats
+	rows2, err := database.DB.Query(`
+		SELECT status, COUNT(*) 
+		FROM analysis_results 
+		WHERE status IS NOT NULL 
+		GROUP BY status
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get compliance stats: %w", err)
+	}
+	defer rows2.Close()
+
+	for rows2.Next() {
+		var status string
+		var count int
+		if err := rows2.Scan(&status, &count); err == nil {
+			metrics.ComplianceStats[status] = count
+		}
+	}
+
+	// 4. Sanitization Version Stats
+	rows3, err := database.DB.Query(`
+		SELECT data_sanitization_version, COUNT(*) 
+		FROM analysis_results 
+		WHERE data_sanitization_version IS NOT NULL 
+		GROUP BY data_sanitization_version
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get sanitization stats: %w", err)
+	}
+	defer rows3.Close()
+
+	for rows3.Next() {
+		var version string
+		var count int
+		if err := rows3.Scan(&version, &count); err == nil {
+			metrics.SanitizationVersionStats[version] = count
+		}
+	}
+
+	return metrics, nil
+}

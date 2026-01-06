@@ -37,7 +37,7 @@ const Header: React.FC<Props> = ({ currentView, onNavigate }) => {
           </button>
           <div className="h-6 w-px bg-emerald-700 mx-2"></div>
           <button onClick={() => onNavigate('monitoring')} className={`${getLinkClass('monitoring')} flex items-center gap-1.5`}>
-            <Activity className="w-4 h-4" /> Simulasi Monitoring (PoC)
+            <Activity className="w-4 h-4" /> Status Sistem
           </button>
         </nav>
       </div>
